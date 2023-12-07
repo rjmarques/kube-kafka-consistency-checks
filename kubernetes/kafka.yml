@@ -35,6 +35,8 @@ spec:
           value: "1"
         - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
           value: "1"
+        - name: KAFKA_RETENTION_MS
+          value: "86400000"
         resources:
           limits:
             memory: "512Mi"
@@ -46,7 +48,8 @@ spec:
                 "echo -e 'Waiting for Kafka to become available';
                 kafka-topics --bootstrap-server localhost:29092 --list;
                 echo -e 'Creating Kafka topics';
-                kafka-topics --bootstrap-server localhost:29092 --create --if-not-exists --topic kafka-consistency-checks --replication-factor 1 --partitions 4;
+                kafka-topics --bootstrap-server localhost:29092 --create --if-not-exists --topic consistency-checks-in --replication-factor 1 --partitions 4;
+                kafka-topics --bootstrap-server localhost:29092 --create --if-not-exists --topic consistency-checks-out --replication-factor 1 --partitions 4;
                 echo -e 'Successfully created the following topics:';
                 kafka-topics --bootstrap-server localhost:29092 --list"
               ]

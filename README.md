@@ -1,5 +1,14 @@
 # Kubernetes and Kafka Consisntency Checks
 
+## Python
+
+```bash
+# create the venv
+python -m venv kube-kafka
+# and active it
+source kube-kafka/Scripts/activate
+```
+
 ## Docker and GH packages
 
 ```bash
@@ -12,6 +21,8 @@ docker build --tag ghcr.io/rjmarques/httpd:dev src
 # push to GH registry
 docker push ghcr.io/rjmarques/httpd:dev
 ```
+
+## Kafka (inspecting)
 
 ```bash
 # use kcat via docker
