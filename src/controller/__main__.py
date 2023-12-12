@@ -70,6 +70,9 @@ def consume_loop(consumer, topic):
         consumer.close()
 
 def check_for_stuck():
+    if stopped:
+        return # stop checking
+
     logging.info("checking for late/stuck messages")
     
     now = time.time()
