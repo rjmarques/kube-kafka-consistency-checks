@@ -1,9 +1,5 @@
 from confluent_kafka import Consumer, Producer, KafkaError, KafkaException
-import time
-import threading
-import socket
-import uuid
-import logging
+import os, sys, time, threading, socket, uuid, logging
 
 logging.basicConfig(format='%(asctime)s - %(message)s',level=logging.INFO)
 
@@ -83,16 +79,25 @@ def check_for_stuck():
     
     threading.Timer(10, check_for_stuck).start()
 
+def parse_config():
+    cfg = {}
+    cfg['bootstrap_servers'] = os.getenv('BOOTSTRAP_SERVERS', default=None)
+    return cfg
 
 def main():
+    cfg = parse_config()
+    if 'bootstrap_servers' not in cfg:
+        logging.error("BOOTSTRAP_SERVERS env var is not define or is empty")
+        sys.exit()
+
     producer = Producer({
-        'bootstrap.servers': 'localhost:29092',
+        'bootstrap.servers': cfg['bootstrap_servers'],
         'client.id': socket.gethostname()
     })
     input_topic = 'consistency-checks-in'
 
     consumer = Consumer({
-        'bootstrap.servers': 'localhost:29092',
+        'bootstrap.servers': cfg['bootstrap_servers'],
         'enable.auto.commit': True,
         'group.id': 'consistency-controller',
         'auto.offset.reset': 'earliest',

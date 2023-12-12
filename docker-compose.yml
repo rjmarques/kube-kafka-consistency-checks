@@ -56,4 +56,55 @@ services:
       echo -e 'Successfully created the following topics:';
       kafka-topics --bootstrap-server kafka:9092 --list
       "
-    
+  controller:
+    container_name: controller
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: controller
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped
+  worker-1:
+    container_name: worker_1
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: worker
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped
+  worker-2:
+    container_name: worker_2
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: worker
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped
+  worker-3:
+    container_name: worker_3
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: worker
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped

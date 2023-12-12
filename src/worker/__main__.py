@@ -1,9 +1,5 @@
 from confluent_kafka import Consumer, Producer, KafkaError, KafkaException
-import uuid
-import logging
-import time
-import random
-import threading
+import os, sys, argparse, uuid, logging, time, random, threading
 
 logging.basicConfig(format='%(asctime)s - %(message)s',level=logging.INFO)
 
@@ -106,16 +102,26 @@ def transform_loop(consumer, input_topic, producer, output_topic):
             if should_raise():
                 raise RuntimeError("random error! Boom!")
             
-            if uncommited_count >= 10:
+            if uncommited_count >= 5:
                 commit_transaction(producer, consumer)
 
     finally:
         # close down consumer to commit final offsets.
         consumer.close()
 
+def parse_config():
+    cfg = {}
+    cfg['bootstrap_servers'] = os.getenv('BOOTSTRAP_SERVERS', default=None)
+    return cfg
+
 def main():
+    cfg = parse_config()
+    if 'bootstrap_servers' not in cfg:
+        logging.error("BOOTSTRAP_SERVERS env var is not define or is empty")
+        sys.exit()
+
     consumer = Consumer({
-        'bootstrap.servers': 'localhost:29092',
+        'bootstrap.servers': cfg['bootstrap_servers'],
         'enable.auto.commit': False,
         'group.id': 'consistency-worker',
         'auto.offset.reset': 'earliest',
@@ -123,7 +129,7 @@ def main():
     })
 
     producer = Producer({
-        'bootstrap.servers': 'localhost:29092',
+        'bootstrap.servers': cfg['bootstrap_servers'],
         'transactional.id': f'eos-consistency-{str(uuid.uuid4())}' # exactly-once-semantics
     })
 
