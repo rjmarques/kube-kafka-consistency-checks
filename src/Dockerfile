@@ -1,5 +1,8 @@
 FROM python:3.12-slim-bookworm
 
+LABEL org.opencontainers.image.source=https://github.com/rjmarques/kube-kafka-consistency-checks
+LABEL org.opencontainers.image.licenses=MIT
+
 WORKDIR /app
 
 ARG TARGET
