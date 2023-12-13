@@ -10,6 +10,7 @@ def delivery_report(err, msg):
         logging.info(f"message delivered: {msg.topic()} @ {msg.partition()} ({msg.offset()}) -> {msg.value().decode()}")
 
 uncommited_count = 0
+graceful_exit = True
 
 def on_assign(consumer, partitions):        
     for p in partitions:
@@ -18,6 +19,11 @@ def on_assign(consumer, partitions):
 
 def handle_revokation(producer):
     def on_revoke(consumer, partitions):
+        # if the error was raised on pupose
+        # don't gracefuly terminate the transaction
+        if not graceful_exit:
+            return
+
         for p in partitions:
             logging.info(f'revoking: topic {p.topic} partition {p.partition} offset {p.offset}')
 
@@ -69,7 +75,7 @@ def should_raise() -> bool:
     return random.randint(1, 100) <= 1
 
 def transform_loop(consumer, input_topic, producer, output_topic):
-    global uncommited_count
+    global uncommited_count, graceful_exit
 
     try:
         # init the transaction, clears out any other ones for the given transaction.id
@@ -100,13 +106,16 @@ def transform_loop(consumer, input_topic, producer, output_topic):
 
             # synthetic random error to force some transactions to fail sporadically
             if should_raise():
-                raise RuntimeError("random error! Boom!")
+                logging.info("random error! Boom!")
+                graceful_exit = False
+                sys.exit()
             
-            if uncommited_count >= 5:
+            if uncommited_count >= 10:
                 commit_transaction(producer, consumer)
 
     finally:
         # close down consumer to commit final offsets.
+        logging.info("closing consumer")
         consumer.close()
 
 def parse_config():

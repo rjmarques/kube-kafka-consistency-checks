@@ -74,7 +74,7 @@ def check_for_stuck():
     now = time.time()
     for id, ts in inflight_messages.items():
         age_in_seconds = now - ts
-        if age_in_seconds > 30:
+        if age_in_seconds > 60:
             logging.info(f'{id} is stil inflight after {age_in_seconds} seconds!')
     
     threading.Timer(10, check_for_stuck).start()
