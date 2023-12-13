@@ -70,9 +70,9 @@ def begin_transaction(producer):
 def transform(in_msg) -> str:
     return in_msg.value().decode()
 
-# returns true X% of the time
+# returns true 0.1% of the time
 def should_raise() -> bool:
-    return random.randint(1, 100) <= 1
+    return random.random() < 0.001
 
 def transform_loop(consumer, input_topic, producer, output_topic):
     global uncommited_count, graceful_exit
@@ -87,7 +87,7 @@ def transform_loop(consumer, input_topic, producer, output_topic):
 
         logging.info("starting Consume-Transform-Process loop")
         while True:
-            msg = consumer.poll(timeout=0.100)
+            msg = consumer.poll(timeout=0.5)
             if msg is None: continue
 
             if msg.error():
@@ -98,17 +98,18 @@ def transform_loop(consumer, input_topic, producer, output_topic):
                     raise KafkaException(msg.error())
             else:
                 logging.info(f"message received: {msg.topic()} @ {msg.partition()} ({msg.offset()}) -> {msg.value().decode()}")
+
+                # synthetic random error to force some transactions to fail sporadically
+                if should_raise():
+                    logging.info("random error! Boom!")
+                    graceful_exit = False
+                    sys.exit() 
+
                 out_msg = transform(msg)
                 producer.produce(output_topic, value=out_msg, on_delivery=delivery_report)
 
                 # keep track of how many messages need to be commited in the transaction
-                uncommited_count += 1
-
-            # synthetic random error to force some transactions to fail sporadically
-            if should_raise():
-                logging.info("random error! Boom!")
-                graceful_exit = False
-                sys.exit()
+                uncommited_count += 1                           
             
             if uncommited_count >= 10:
                 commit_transaction(producer, consumer)

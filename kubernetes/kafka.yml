@@ -29,17 +29,25 @@ spec:
           value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
         - name: KAFKA_ADVERTISED_LISTENERS
           value: PLAINTEXT://:29092,PLAINTEXT_INTERNAL://kafka-service:9092
+        - name: KAFKA_INTER_BROKER_LISTENER_NAME
+          value: PLAINTEXT
         - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
           value: "1"
         - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
           value: "1"
         - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
           value: "1"
+        - name: KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR
+          value: "1"
         - name: KAFKA_RETENTION_MS
           value: "86400000"
+        - name: KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL
+          value: http://localhost:8081
         resources:
           limits:
-            memory: "512Mi"
+            memory: "1024Mi"
             cpu: "500m"
         lifecycle:
           postStart:
@@ -53,6 +61,22 @@ spec:
                 echo -e 'Successfully created the following topics:';
                 kafka-topics --bootstrap-server localhost:29092 --list"
               ]
+      - name: schema-registry
+        image: confluentinc/cp-schema-registry:7.0.3
+        ports:
+          - containerPort: 8081
+        env:
+        - name: SCHEMA_REGISTRY_HOST_NAME
+          value: schema-registry
+        - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
+          value: localhost:9092
+        - name: SCHEMA_REGISTRY_LISTENERS
+          value: http://0.0.0.0:8081
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
 --- 
 apiVersion: v1
 kind: Service
