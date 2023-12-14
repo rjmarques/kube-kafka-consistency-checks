@@ -29,9 +29,9 @@ def handle_revokation(producer):
 
         if uncommited_count > 0:
             try:
-                commit_transaction(producer, consumer)         
+                commit_transaction(producer, consumer)
             except:
-                abort_transaction(producer)                
+                abort_transaction(producer)
 
     return on_revoke
 

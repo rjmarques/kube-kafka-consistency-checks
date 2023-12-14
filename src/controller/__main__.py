@@ -13,10 +13,15 @@ def gen_value() -> str:
     return str(uuid.uuid4())
 
 def acked(err, msg):
+    global inflight_messages
+
+    id = msg.value().decode()
     if err is not None:
         logging.info("failed to deliver message: %s: %s" % (str(msg), str(err)))
+        if id in inflight_messages:
+            del inflight_messages[id]
     else:
-        logging.debug(f"message produced: {msg.topic()} @ {msg.partition()} ({msg.offset()}) -> {msg.value().decode()}")
+        logging.debug(f"message produced: {msg.topic()} @ {msg.partition()} ({msg.offset()}) -> {id}")
 
 def produce_loop(producer, topic):
     if stopped:
