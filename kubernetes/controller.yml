@@ -1,0 +1,28 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: controller-deployment
+  namespace: kube-kafka
+  labels:
+    app: controller
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: controller
+  template:
+    metadata:
+      labels:
+        app: controller
+    spec:
+      containers:
+      - name: controller
+        image: ghcr.io/rjmarques/controller:latest
+        imagePullPolicy: Always
+        env:
+        - name: BOOTSTRAP_SERVERS
+          value: kafka-service:9092
+        resources:
+          limits:
+            memory: "128Mi"
+            cpu: "1"

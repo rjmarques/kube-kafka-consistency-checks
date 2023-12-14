@@ -1,0 +1,27 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: worker-deployment
+  namespace: kube-kafka
+  labels:
+    app: worker
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: worker
+  template:
+    metadata:
+      labels:
+        app: worker
+    spec:
+      containers:
+      - name: worker
+        image: ghcr.io/rjmarques/worker:latest
+        imagePullPolicy: Always
+        env:
+        - name: BOOTSTRAP_SERVERS
+          value: kafka-service:9092
+        resources:
+          limits:
+            memory: "128Mi"

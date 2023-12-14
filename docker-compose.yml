@@ -1,0 +1,110 @@
+version: '2'
+services:
+  zookeeper:
+    container_name: zookeeper
+    image: confluentinc/cp-zookeeper:latest
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+      ZOOKEEPER_TICK_TIME: 2000
+    ports:
+      - "22181:2181"
+  kafka:
+    container_name: kafka
+    depends_on:
+      - zookeeper
+    image: confluentinc/cp-kafka:latest
+    ports:
+      - 9092:9092
+      - 29092:29092
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:29092
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+  schema-registry:
+    image: confluentinc/cp-schema-registry:latest
+    hostname: schema-registry
+    container_name: schema-registry
+    depends_on:
+      - kafka
+    ports:
+      - "8081:8081"
+    environment:
+      SCHEMA_REGISTRY_HOST_NAME: schema-registry
+      SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: 'kafka:9092'
+      SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+  init-kafka:
+    container_name: init-kafka
+    image: confluentinc/cp-kafka:latest
+    depends_on:
+      - kafka
+    entrypoint: ['/bin/sh', '-c']
+    command: |
+      "
+      echo -e 'Waiting for Kafka to become available';
+      kafka-topics --bootstrap-server kafka:9092 --list;
+      echo -e 'Creating Kafka topics';
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic consistency-checks-in --replication-factor 1 --partitions 4;
+      kafka-topics --bootstrap-server kafka:9092 --create --if-not-exists --topic consistency-checks-out --replication-factor 1 --partitions 4;
+      echo -e 'Successfully created the following topics:';
+      kafka-topics --bootstrap-server kafka:9092 --list
+      "
+  controller:
+    container_name: controller
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: controller
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped
+  worker-1:
+    container_name: worker_1
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: worker
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped
+  worker-2:
+    container_name: worker_2
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: worker
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped
+  worker-3:
+    container_name: worker_3
+    build:
+      context: .
+      dockerfile: ./src/Dockerfile
+      args:
+        TARGET: worker
+    depends_on:
+      init-kafka:
+        condition: service_completed_successfully
+    environment:
+      BOOTSTRAP_SERVERS: 'kafka:9092'
+    restart: unless-stopped

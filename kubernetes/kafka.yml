@@ -1,0 +1,94 @@
+kind: Deployment
+apiVersion: apps/v1
+metadata:
+  name: kafka-deployment
+  namespace: kube-kafka
+  labels:
+    app: kafka
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kafka
+  template:
+    metadata:
+      labels:
+        app: kafka
+    spec:
+      containers:
+      - name: broker
+        image: confluentinc/cp-kafka:7.4.3
+        ports:
+        - containerPort: 9092
+        env:
+        - name: KAFKA_BROKER_ID
+          value: "1"
+        - name: KAFKA_ZOOKEEPER_CONNECT
+          value: 'zookeeper-service:2181'
+        - name: KAFKA_LISTENER_SECURITY_PROTOCOL_MAP
+          value: PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
+        - name: KAFKA_ADVERTISED_LISTENERS
+          value: PLAINTEXT://:29092,PLAINTEXT_INTERNAL://kafka-service:9092
+        - name: KAFKA_INTER_BROKER_LISTENER_NAME
+          value: PLAINTEXT
+        - name: KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_MIN_ISR
+          value: "1"
+        - name: KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_CONFLUENT_LICENSE_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_CONFLUENT_BALANCER_TOPIC_REPLICATION_FACTOR
+          value: "1"
+        - name: KAFKA_RETENTION_MS
+          value: "86400000"
+        - name: KAFKA_CONFLUENT_SCHEMA_REGISTRY_URL
+          value: http://localhost:8081
+        resources:
+          limits:
+            memory: "1024Mi"
+            cpu: "500m"
+        lifecycle:
+          postStart:
+            exec:
+              command: ["/bin/bash", "-c",
+                "echo -e 'Waiting for Kafka to become available';
+                kafka-topics --bootstrap-server localhost:29092 --list;
+                echo -e 'Creating Kafka topics';
+                kafka-topics --bootstrap-server localhost:29092 --create --if-not-exists --topic consistency-checks-in --replication-factor 1 --partitions 4;
+                kafka-topics --bootstrap-server localhost:29092 --create --if-not-exists --topic consistency-checks-out --replication-factor 1 --partitions 4;
+                echo -e 'Successfully created the following topics:';
+                kafka-topics --bootstrap-server localhost:29092 --list"
+              ]
+      - name: schema-registry
+        image: confluentinc/cp-schema-registry:7.0.3
+        ports:
+          - containerPort: 8081
+        env:
+        - name: SCHEMA_REGISTRY_HOST_NAME
+          value: schema-registry
+        - name: SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS
+          value: localhost:9092
+        - name: SCHEMA_REGISTRY_LISTENERS
+          value: http://0.0.0.0:8081
+        resources:
+          limits:
+            memory: "512Mi"
+            cpu: "500m"
+
+--- 
+apiVersion: v1
+kind: Service
+metadata:
+  name: kafka-service
+  namespace: kube-kafka
+spec:  
+  type: NodePort
+  selector:
+    app: kafka
+  ports:
+    - protocol: TCP
+      port: 9092
+      targetPort: 9092
+      nodePort: 30092
